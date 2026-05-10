@@ -24,6 +24,11 @@ const { Content } = post;
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{post.frontmatter.title}</title>
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+    <meta name="theme-color" content="#1B2C4E" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   </head>
   <body>
     <div class="top-controls no-print">
@@ -93,12 +98,21 @@ const { Content } = post;
       </div>
 
       <footer class="no-print" style="text-align: center; margin-top: 3rem; color: #666; font-size: 0.8rem;">
-        <p>© 2026 ひらめき365 事務局 v0.1.8</p>
+        <p>© 2026 ひらめき365 事務局 v0.1.9</p>
       </footer>
     </article>
 
     <script is:inline src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script>
+      // Service Workerの登録
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(err => {
+            console.log('SW registration failed:', err);
+          });
+        });
+      }
+
       let currentStep = 1;
       const totalSteps = 7;
       let score = 0;

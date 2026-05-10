@@ -37,8 +37,26 @@ const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ひらめき365｜大人の脳活</title>
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+    <meta name="theme-color" content="#1B2C4E" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   </head>
   <body>
+    <!-- インストールバナー -->
+    <div id="install-banner" class="install-banner hidden">
+      <div class="install-content">
+        <span class="install-icon">💡</span>
+        <div class="install-text">
+          <p class="install-title">ホーム画面に追加しませんか？</p>
+          <p class="install-desc">アプリとして保存して、毎朝スムーズに脳活を始めましょう。</p>
+        </div>
+      </div>
+      <button id="install-btn" class="install-action-btn">追加する</button>
+      <button id="install-close" class="install-close-btn">×</button>
+    </div>
+
     <header>
       <h1>ひらめき365</h1>
       <p class="subtitle">大人の脳活・記憶力トレーニング</p>
@@ -80,10 +98,50 @@ const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
     </main>
 
     <footer>
-      <p>© 2026 ひらめき365 事務局 <span class="version">v0.1.8</span></p>
+      <p>© 2026 ひらめき365 事務局 <span class="version">v0.1.9</span></p>
     </footer>
 
     <script>
+      // インストールバナーの制御
+      let deferredPrompt;
+      const installBanner = document.getElementById('install-banner');
+      const installBtn = document.getElementById('install-btn');
+      const installClose = document.getElementById('install-close');
+
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        // バナーを表示
+        if (localStorage.getItem('hirameki365-install-dismissed') !== 'true') {
+          installBanner?.classList.remove('hidden');
+        }
+      });
+
+      installBtn?.addEventListener('click', async () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          if (outcome === 'accepted') {
+            installBanner?.classList.add('hidden');
+          }
+          deferredPrompt = null;
+        }
+      });
+
+      installClose?.addEventListener('click', () => {
+        installBanner?.classList.add('hidden');
+        localStorage.setItem('hirameki365-install-dismissed', 'true');
+      });
+
+      // Service Workerの登録
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(err => {
+            console.log('SW registration failed:', err);
+          });
+        });
+      }
+
       // localStorageから結果を読み取ってカレンダーに反映
       const results = JSON.parse(localStorage.getItem('hirameki365-results') || '{}');
       
@@ -120,6 +178,29 @@ const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
     display: inline-block; padding: 0.5rem 2rem; background-color: var(--color-primary-navy); 
     color: white; border-radius: 50px; font-weight: bold; font-size: 1.2rem;
   }
+
+  /* インストールバナーのスタイル */
+  .install-banner {
+    position: fixed; top: 1rem; left: 50%; transform: translateX(-50%);
+    width: 90%; max-width: 500px; background: white; border: 2px solid var(--color-primary-navy);
+    border-radius: 16px; padding: 1rem; display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15); z-index: 2000; animation: slideDown 0.5s ease-out;
+  }
+  .hidden { display: none !important; }
+  .install-content { display: flex; align-items: center; gap: 0.8rem; }
+  .install-icon { font-size: 2rem; }
+  .install-text { text-align: left; }
+  .install-title { font-weight: bold; font-size: 1rem; margin: 0; color: var(--color-primary-navy); }
+  .install-desc { font-size: 0.8rem; margin: 0; color: #666; }
+  .install-action-btn { 
+    background: var(--color-primary-navy); color: white; border: none; padding: 0.5rem 1rem;
+    border-radius: 8px; font-weight: bold; cursor: pointer; white-space: nowrap;
+  }
+  .install-close-btn { 
+    background: none; border: none; font-size: 1.5rem; color: #999; cursor: pointer; padding-left: 0.5rem;
+  }
+
+  @keyframes slideDown { from { top: -100px; } to { top: 1rem; } }
 
   .calendar-grid { 
     display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; 
@@ -191,7 +272,7 @@ const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
       border-radius: 4px;
     }
     .day-number { font-size: 0.9rem; }
-    .day-label { font-size: 0.6rem; }
+    .day-label { font-size: 0.6rem; } /* スマホでも表示されるように修正 */
     .day-label.is-completed { font-size: 0.5rem; margin-top: 2px; }
     .calendar-day.today { border-width: 2px; }
     .calendar-day.today::after { 

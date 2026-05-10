@@ -1,0 +1,33 @@
+{
+  "name": "ひらめき365｜大人の脳活",
+  "short_name": "ひらめき365",
+  "description": "365日、毎日楽しめる大人の脳トレ・記憶力トレーニング",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F9F8F1",
+  "theme_color": "#1B2C4E",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
