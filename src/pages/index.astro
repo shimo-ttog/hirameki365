@@ -175,14 +175,20 @@ const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
   footer { text-align: center; margin-top: 3rem; color: #666; font-size: 0.9rem; }
 
   @media (max-width: 600px) {
-    body { padding: 0.5rem; }
-    header h1 { font-size: 1.8rem; }
-    .subtitle { font-size: 0.9rem; }
-    .calendar-grid { padding: 4px; gap: 4px; }
-    .weekday-header { font-size: 0.9rem; padding: 8px 0; }
-    .day-number { font-size: 1.1rem; }
-    .day-label { font-size: 0.8rem; }
-    .day-label.is-completed { font-size: 0.6rem; }
-    .calendar-day.today::after { font-size: 0.5rem; padding: 0 2px; }
+    body { padding: 0.5rem; overflow-x: hidden; }
+    header h1 { font-size: 1.6rem; }
+    .subtitle { font-size: 0.85rem; }
+    .calendar-grid { 
+      width: 100%; 
+      padding: 4px; 
+      gap: 4px; 
+      box-sizing: border-box;
+      margin: 0;
+    }
+    .weekday-header { font-size: 0.8rem; padding: 6px 0; }
+    .day-number { font-size: 1rem; }
+    .day-label { font-size: 0.7rem; }
+    .day-label.is-completed { font-size: 0.55rem; }
+    .calendar-day.today::after { font-size: 0.45rem; padding: 0 1px; }
   }
 </style>

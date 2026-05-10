@@ -472,9 +472,9 @@ h1 { color: var(--color-primary-navy); font-size: 1.8rem; border-bottom: 4px sol
 @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
 @media (max-width: 600px) {
-  body { padding: 0.5rem; }
-  article { padding: 1.5rem 1rem; border-radius: 12px; }
-  h1 { font-size: 1.4rem; margin-bottom: 1.5rem; }
+  body { padding: 0.5rem; overflow-x: hidden; }
+  article { padding: 1.5rem 0.8rem; border-radius: 8px; width: 100%; box-sizing: border-box; margin: 0; }
+  h1 { font-size: 1.3rem; margin-bottom: 1.2rem; line-height: 1.4; }
   
   .top-controls {
     flex-direction: column;
