@@ -80,7 +80,7 @@ const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
     </main>
 
     <footer>
-      <p>© 2026 ひらめき365 事務局 <span class="version">v0.1.2</span></p>
+      <p>© 2026 ひらめき365 事務局 <span class="version">v0.1.3</span></p>
     </footer>
 
     <script>
@@ -175,20 +175,31 @@ const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
   footer { text-align: center; margin-top: 3rem; color: #666; font-size: 0.9rem; }
 
   @media (max-width: 600px) {
-    body { padding: 0.5rem; overflow-x: hidden; }
-    header h1 { font-size: 1.6rem; }
-    .subtitle { font-size: 0.85rem; }
+    body { padding: 0.4rem; overflow-x: hidden; }
+    header h1 { font-size: 1.5rem; }
+    .subtitle { font-size: 0.8rem; }
     .calendar-grid { 
       width: 100%; 
-      padding: 4px; 
-      gap: 4px; 
+      padding: 2px; 
+      gap: 2px; /* 隙間をさらに詰める */
       box-sizing: border-box;
       margin: 0;
     }
-    .weekday-header { font-size: 0.8rem; padding: 6px 0; }
-    .day-number { font-size: 1rem; }
-    .day-label { font-size: 0.7rem; }
-    .day-label.is-completed { font-size: 0.55rem; }
-    .calendar-day.today::after { font-size: 0.45rem; padding: 0 1px; }
+    .weekday-header { font-size: 0.75rem; padding: 4px 0; }
+    .calendar-day { 
+      min-height: 40px; 
+      border-radius: 4px;
+    }
+    .day-number { font-size: 0.9rem; }
+    .day-label { font-size: 0.6rem; }
+    .day-label.is-completed { font-size: 0.5rem; margin-top: 2px; }
+    .calendar-day.today { border-width: 2px; }
+    .calendar-day.today::after { 
+      font-size: 0.4rem; 
+      padding: 0 1px; 
+      top: 0px; 
+      right: 0px;
+      border-radius: 2px;
+    }
   }
 </style>
