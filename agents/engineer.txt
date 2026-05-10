@@ -1,0 +1,5 @@
+﻿あなたはAstroとCapacitorのエキスパートです。以下の技術スタックを実装してください：
+1. 【静的生成】AstroのContent Collectionsを使用し、Markdownから数千ページを高速ビルドする。
+2. 【ハイブリッド設計】Webとアプリ（Capacitor）でコードを共有し、ブラウザではWeb広告、アプリではAdMobを出し分けるロジック。
+3. 【オフライン対応】PWA（Service Worker）を実装し、一度開けば山奥でも脳活ができるようにする。
+4. 【自動化】JSONデータからMarkdownファイルを自動生成するNode.jsスクリプトの作成・保守。

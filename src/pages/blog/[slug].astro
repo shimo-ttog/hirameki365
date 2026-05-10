@@ -1,0 +1,474 @@
+---
+import '../../styles/design-tokens.css';
+
+// この関数が動的ルートには必須です
+export async function getStaticPaths() {
+  const posts = Object.values(import.meta.glob('../../content/blog/*.md', { eager: true }));
+  
+  return posts.map((post: any) => {
+    const fileName = post.file.split(/[\\/]/).pop();
+    const slug = fileName.replace('.md', '');
+    
+    return {
+      params: { slug },
+      props: { post },
+    };
+  });
+}
+
+const { post } = Astro.props;
+const { Content } = post;
+---
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{post.frontmatter.title}</title>
+  </head>
+  <body>
+    <div class="top-controls no-print">
+      <div class="sound-control">
+        <button id="sound-toggle" class="control-btn" title="音声を切り替える">🔊 音あり</button>
+      </div>
+      <div class="font-size-controls">
+        <span>文字サイズ：</span>
+        <button class="font-btn active" data-size="normal">標準</button>
+        <button class="font-btn" data-size="large">大</button>
+        <button class="font-btn" data-size="xlarge">特大</button>
+      </div>
+    </div>
+
+    <article>
+      <header>
+        <h1>{post.frontmatter.title}</h1>
+      </header>
+      
+      <div class="brain-content">
+        <Content />
+      </div>
+
+      <!-- 最終結果ステップをAstro側で定義（Markdownのパースエラー回避） -->
+      <div class="quiz-step" data-step="final" style="display: none;">
+        <div class="final-summary">
+          <h2>お疲れでした！</h2>
+          <p id="final-score-text"></p>
+          <div id="final-stamp-container" class="stamp-wrapper hidden">
+            <div class="stamp-success">合格</div>
+          </div>
+          
+          <div id="share-section" class="share-area hidden">
+            <p style="font-size: 1.1rem; margin-bottom: 0.8rem; font-weight: bold;">結果を報告する：</p>
+            <div class="share-btns">
+              <a id="share-line" target="_blank" rel="noopener noreferrer" class="share-btn line">LINEで送る</a>
+              <a id="share-x" target="_blank" rel="noopener noreferrer" class="share-btn x">Xでつぶやく</a>
+            </div>
+          </div>
+        </div>
+
+        <hr>
+
+        <div class="final-extra-content" style="width: 100%; text-align: center;">
+          <h3>【今日の豆知識】</h3>
+          <p>{post.frontmatter.trivia}</p>
+
+          <hr>
+          
+          <div class="maxim-section">
+            <h3>📜 今日の格言</h3>
+            <p class="maxim-text">{post.frontmatter.maxim}</p>
+          </div>
+        </div>
+        
+        <div class="step-nav" style="margin-top: 3rem;">
+          <button onclick="window.location.href='/'" class="btn-adult btn-primary">カレンダーに戻る</button>
+        </div>
+      </div>
+
+      <div class="print-footer only-print">
+        <p>ひらめき365：大人の脳活・記憶力トレーニング</p>
+      </div>
+    </article>
+
+    <script is:inline src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script>
+      let currentStep = 1;
+      const totalSteps = 7;
+      let score = 0;
+
+      // 効果音の設定 (フリー音源を使用)
+      const sounds = {
+        correct: new Audio('/sounds/correct.mp3'), // 指定されたカスタム音源
+        incorrect: new Audio('/sounds/incorrect.mp3'), // 指定されたカスタム音源
+        perfect: new Audio('/sounds/perfect.mp3') // 指定されたカスタム音源
+      };
+      
+      let isMuted = localStorage.getItem('hirameki365-muted') === 'true';
+      const soundToggle = document.getElementById('sound-toggle');
+
+      function updateSoundUI() {
+        if (soundToggle) {
+          soundToggle.textContent = isMuted ? '🔇 消音中' : '🔊 音あり';
+          soundToggle.classList.toggle('muted', isMuted);
+        }
+      }
+
+      function playSound(type) {
+        if (!isMuted && sounds[type]) {
+          sounds[type].currentTime = 0;
+          sounds[type].play().catch(e => console.log('Audio play blocked:', e));
+        }
+      }
+
+      soundToggle?.addEventListener('click', () => {
+        isMuted = !isMuted;
+        localStorage.setItem('hirameki365-muted', isMuted);
+        updateSoundUI();
+      });
+
+      updateSoundUI();
+
+      /**
+       * 表記ゆれを吸収するための正規化関数
+       */
+      function normalize(str) {
+        if (!str) return '';
+        const normalized = str
+          .trim()
+          .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xfee0)) // 全角英数 -> 半角
+          .replace(/[\u30a1-\u30f6]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0x60)) // カタカナ -> ひらがな
+          .replace(/[円￥\\,，]/g, '') // 通貨記号、全角半角カンマ、単位「円」を除去
+          .replace(/曜日?/g, '') // 「木曜日」や「木曜」から「曜日」または「曜」を除去して「木」として判定
+          .replace(/[\s　]/g, '') // 空白除去
+          .toLowerCase();
+        console.log(`Original: ${str} -> Normalized: ${normalized}`);
+        return normalized;
+      }
+function showStep(step) {
+  document.querySelectorAll('.quiz-step').forEach(el => el.style.display = 'none');
+  const stepEl = document.querySelector(`.quiz-step[data-step="${step}"]`);
+  if (stepEl) {
+    stepEl.style.display = 'block';
+    window.scrollTo(0, 0);
+
+    // テキスト入力欄があれば自動フォーカス
+    const input = stepEl.querySelector('.user-answer-input');
+    if (input) {
+      (input as HTMLInputElement).focus();
+    }
+
+    bindSpeechButtons(stepEl);
+  }
+}
+
+function bindSpeechButtons(container) {
+        container.querySelectorAll('.question-block').forEach((block) => {
+          if (block.querySelector('.speech-btn')) return;
+          
+          let text = block.querySelector('.question-text')?.textContent;
+          if (!text) return;
+
+          const sectionTitle = block.closest('.quiz-step').querySelector('h3')?.textContent;
+          let isKanjiQ = sectionTitle === '難読漢字';
+          let isRecollectionQ = sectionTitle === '昭和・平成回想';          
+          if (isKanjiQ) {
+            text = text.replace(/「(.+?)」/g, (match, p1) => {
+              return '「' + '○'.repeat(p1.length).split('').join('、') + '」';
+            });
+          }
+
+          const btn = document.createElement('button');
+          btn.className = 'speech-btn';
+          btn.innerHTML = '🔊';
+          btn.onclick = () => speak(text, btn);
+          block.appendChild(btn);
+        });
+      }
+
+      function speak(text, btn) {
+        if (window.speechSynthesis.speaking) {
+          window.speechSynthesis.cancel();
+          if (btn.classList.contains('speaking')) {
+            btn.classList.remove('speaking');
+            return;
+          }
+        }
+        document.querySelectorAll('.speech-btn').forEach(b => b.classList.remove('speaking'));
+        const uttr = new SpeechSynthesisUtterance(text);
+        uttr.lang = 'ja-JP';
+        uttr.rate = 0.9;
+        uttr.onstart = () => btn.classList.add('speaking');
+        uttr.onend = () => btn.classList.remove('speaking');
+        uttr.onerror = () => btn.classList.remove('speaking');
+        window.speechSynthesis.speak(uttr);
+      }
+
+      function setupEventListeners() {
+        // テキスト入力欄のEnterキー対応
+        document.querySelectorAll('.user-answer-input').forEach(input => {
+          input.addEventListener('keydown', (e) => {
+            if ((e as KeyboardEvent).key === 'Enter') {
+              const step = (input.closest('.quiz-step') as HTMLElement).dataset.step;
+              const judgeBtn = document.querySelector(`.judge-btn[data-step="${step}"]`);
+              if (judgeBtn) (judgeBtn as HTMLElement).click();
+            }
+          });
+        });
+
+        // 判定ボタン
+        document.querySelectorAll('.judge-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const step = e.target.dataset.step;
+            const block = document.querySelector(`.quiz-step[data-step="${step}"] .question-block`);
+            const correct = block.dataset.correct || '';
+            const input = block.querySelector('.user-answer-input');
+            const radios = block.querySelectorAll('.user-answer-radio');
+            const mark = block.querySelector('.judgment-mark');
+            const answerHidden = block.querySelector('.answer-hidden');
+            const nextBtn = document.querySelector(`.next-btn[data-step="${step}"]`);
+            
+            let userAnswer = '';
+            if (input) {
+              userAnswer = input.value;
+            } else if (radios.length > 0) {
+              const checked = Array.from(radios).find((r) => r.checked);
+              userAnswer = checked ? checked.value : '';
+            }
+
+            const correctAnswers = correct.split('|').map((s) => normalize(s));
+            const isCorrect = correctAnswers.includes(normalize(userAnswer));
+
+            if (isCorrect) {
+              score++;
+              playSound('correct');
+            } else {
+              playSound('incorrect');
+            }
+
+            if (mark) {
+              mark.textContent = isCorrect ? '⭕️ 正解！' : '❌ おしい！';
+              mark.className = 'judgment-mark ' + (isCorrect ? 'correct' : 'incorrect');
+            }
+
+            answerHidden.classList.add('reveal');
+            btn.style.display = 'none';
+            if (nextBtn) nextBtn.classList.remove('hidden');
+          });
+        });
+
+        // 次へボタン
+        document.querySelectorAll('.next-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            currentStep++;
+            if (currentStep <= totalSteps) {
+              showStep(currentStep);
+            } else {
+              showFinalResult();
+            }
+          });
+        });
+      }
+
+      function showFinalResult() {
+        showStep('final');
+        const scoreText = document.getElementById('final-score-text');
+        const stampContainer = document.getElementById('final-stamp-container');
+        const allCorrect = score === totalSteps;
+
+        if (scoreText) {
+          let message = `全 ${totalSteps} 問中 <span style="font-size: 2rem; color: var(--color-stamp-red);">${score}</span> 問正解でした！`;
+          if (allCorrect) {
+            message += '<br><span style="color: var(--color-stamp-red); font-weight: bold;">パーフェクト！素晴らしいです！</span>';
+          } else {
+            message += '<br>明日もまた挑戦して脳を活性化させましょう！';
+          }
+          scoreText.innerHTML = message;
+        }
+
+        // 全問正解時のみスタンプを表示
+        if (stampContainer) {
+          if (allCorrect) {
+            stampContainer.classList.remove('hidden');
+          } else {
+            stampContainer.classList.add('hidden');
+          }
+        }
+
+        // 共有ボタンの表示と設定
+        const shareSection = document.getElementById('share-section');
+        if (shareSection) {
+          shareSection.classList.remove('hidden');
+          const shareText = `ひらめき365：今日の脳活結果は【全 ${totalSteps} 問中 ${score} 問正解】でした！💮\n#ひらめき365 #脳トレ\n`;
+          const shareUrl = window.location.origin;
+
+          const lineBtn = document.getElementById('share-line');
+          const xBtn = document.getElementById('share-x');
+
+          if (lineBtn) {
+            (lineBtn as HTMLAnchorElement).href = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`;
+          }
+          if (xBtn) {
+            (xBtn as HTMLAnchorElement).href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+          }
+        }
+        
+        const slug = window.location.pathname.split('/').pop();
+        const results = JSON.parse(localStorage.getItem('hirameki365-results') || '{}');
+        results[slug] = {
+          status: allCorrect ? 'passed' : 'tried',
+          score: score
+        };
+        localStorage.setItem('hirameki365-results', JSON.stringify(results));
+
+        if (allCorrect && typeof confetti === 'function') {
+          playSound('perfect');
+          confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, zIndex: 9999 });
+        }
+      }
+
+      // 文字サイズ変更
+      const fontBtns = document.querySelectorAll('.font-btn');
+      function applyFontSize(size) {
+        document.body.classList.remove('font-large', 'font-xlarge');
+        if (size === 'large') document.body.classList.add('font-large');
+        if (size === 'xlarge') document.body.classList.add('font-xlarge');
+        fontBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.size === size));
+        localStorage.setItem('hirameki365-fontsize', size);
+      }
+
+      const savedSize = localStorage.getItem('hirameki365-fontsize') || 'normal';
+      applyFontSize(savedSize);
+      fontBtns.forEach(btn => btn.addEventListener('click', () => applyFontSize(btn.dataset.size)));
+
+      // 起動
+      showStep(1);
+      setupEventListeners();
+    </script>
+  </body>
+</html>
+
+<style>
+body { padding: 2rem; max-width: 800px; margin: 0 auto; background: var(--color-bg-ivory); transition: font-size 0.3s ease; }
+
+.top-controls {
+  display: flex; align-items: center; justify-content: flex-end;
+  gap: 1.5rem; margin-bottom: 1rem;
+}
+
+.font-size-controls {
+  display: flex; align-items: center;
+  gap: 0.5rem; font-weight: bold; color: var(--color-primary-navy);
+}
+
+.control-btn, .font-btn {
+  padding: 0.5rem 1rem; border: 2px solid var(--color-primary-navy);
+  background: white; border-radius: 8px; cursor: pointer; font-weight: bold;
+  transition: all 0.2s;
+}
+
+.font-btn.active { background: var(--color-primary-navy); color: white; }
+.control-btn:hover { background: #f0f7ff; }
+
+body.font-large { font-size: 1.2em; }
+body.font-xlarge { font-size: 1.4em; }
+
+article { background: white; padding: 2.5rem; border-radius: 24px; box-shadow: 0 15px 35px rgba(0,0,0,0.07); min-height: 60vh; }
+h1 { color: var(--color-primary-navy); font-size: 1.8rem; border-bottom: 4px solid var(--color-primary-navy); padding-bottom: 0.8rem; margin-bottom: 2rem; }
+
+:global(.quiz-step) { animation: fadeIn 0.5s ease-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+:global(.step-indicator) { display: inline-block; padding: 0.3rem 1rem; background: var(--color-primary-green); color: white; border-radius: 20px; font-weight: bold; font-size: 0.9rem; margin-bottom: 1rem; }
+:global(.question-block) { margin-bottom: 2rem; padding: 1.5rem; border: 1px solid var(--color-border); border-radius: 16px; background: #fafafa; position: relative; }
+:global(.question-text) { font-size: 1.3rem; font-weight: bold; margin-bottom: 1.5rem; padding-right: 3rem; line-height: 1.6; }
+
+:global(.speech-btn) { position: absolute; top: 1rem; right: 1rem; background: white; border: 2px solid var(--color-primary-navy); border-radius: 50%; width: 44px; height: 44px; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 5; }
+:global(.speech-btn.speaking) { background: var(--color-accent-gold); animation: pulse 1.5s infinite; }
+
+:global(.step-nav) { display: flex; justify-content: center; gap: 1rem; margin-top: 2rem; }
+:global(.hidden) { display: none !important; }
+
+:global(.user-answer-input) { width: 100%; max-width: 400px; font-size: 1.5rem; padding: 0.8rem 1.2rem; border: 3px solid var(--color-primary-navy); border-radius: 12px; margin-bottom: 1rem; display: block; margin-left: auto; margin-right: auto; }
+:global(.choices-group) { display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 1rem; }
+:global(.choice-label) { display: block; padding: 1rem; background: white; border: 2px solid var(--color-border); border-radius: 12px; cursor: pointer; font-size: 1.3rem; }
+:global(.user-answer-radio) { transform: scale(1.5); margin-right: 1rem; }
+
+:global(.judgment-mark) { display: block; font-size: 1.8rem; font-weight: bold; margin: 1rem 0; text-align: center; }
+:global(.judgment-mark.correct) { color: #2ecc71; }
+:global(.judgment-mark.incorrect) { color: #e74c3c; }
+
+:global(.answer-hidden) { margin-top: 1.5rem; padding: 1rem; background-color: #f0f0f0; border-radius: 8px; color: transparent; transition: all 0.6s ease; user-select: none; display: block; }
+:global(.answer-hidden.reveal) { color: var(--color-primary-navy); background-color: #eef7ff; border-left: 5px solid var(--color-primary-navy); user-select: text; }
+
+:global(.maxim-section) { margin: 2rem 0; padding: 1.5rem; background-color: #fdfaf0; border: 2px dashed var(--color-primary-green); border-radius: 16px; text-align: center; }
+:global(.maxim-text) { font-size: 1.4rem; font-weight: bold; font-style: italic; }
+
+/* 共有エリア */
+:global(.share-area) {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: #fff;
+  width: 90%;
+}
+:global(.share-btns) { display: flex; justify-content: center; gap: 1rem; }
+:global(.share-btn) {
+  padding: 0.8rem 1.2rem;
+  border-radius: 50px;
+  text-decoration: none;
+  font-weight: bold;
+  font-size: 1rem;
+  color: white;
+  display: flex;
+  align-items: center;
+  transition: opacity 0.2s;
+}
+:global(.share-btn.line) { background-color: #06C755; }
+:global(.share-btn.x) { background-color: #000000; }
+:global(.share-btn:hover) { opacity: 0.8; }
+
+.final-summary { 
+  text-align: center; 
+  margin: 3rem 0; 
+  display: flex; 
+  flex-direction: column; 
+  align-items: center; 
+  justify-content: center;
+  gap: 1.5rem; 
+  width: 100%;
+}
+.final-summary h2 { font-size: 2.2rem; color: var(--color-primary-navy); margin: 0; text-align: center; width: 100%; }
+.final-summary p { font-size: 1.5rem; margin: 0; text-align: center; width: 100%; }
+
+:global(.quiz-step[data-step="final"]) {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+:global(.quiz-step[data-step="final"] > h3),
+:global(.quiz-step[data-step="final"] > hr) {
+  width: 100%;
+  text-align: center;
+}
+
+:global(.stamp-wrapper) { 
+  display: flex; 
+  justify-content: center; 
+  align-items: center;
+  margin: 2rem 0; 
+  width: 100%;
+}
+:global(.stamp-success) { 
+  font-size: 1.8rem; 
+  /* design-tokens.cssのスタイルを継承しつつ微調整 */
+}
+
+.btn-adult { cursor: pointer; font-weight: bold; border-radius: 12px; transition: all 0.2s; }
+.btn-primary { background: var(--color-primary-navy); color: white; border: none; font-size: 1.3rem; padding: 1rem 2rem; }
+.btn-outline { background: white; color: var(--color-primary-navy); border: 2px solid var(--color-primary-navy); font-size: 1.3rem; padding: 1rem 2rem; }
+
+@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+@media print { .font-size-controls, .step-nav, .speech-btn, .btn-adult { display: none !important; } .quiz-step { display: block !important; } }
+</style>

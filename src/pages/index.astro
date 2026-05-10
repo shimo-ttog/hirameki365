@@ -1,0 +1,184 @@
+---
+import '../styles/design-tokens.css';
+// 全てのMarkdown記事を取得
+const posts = Object.values(import.meta.glob('../content/blog/*.md', { eager: true }));
+
+// 記事を日付でマッピング
+const postsMap = {};
+posts.forEach((post) => {
+  postsMap[post.frontmatter.date] = post;
+});
+
+// 現在のシステム日付を取得
+const now = new Date();
+const year = now.getFullYear();
+const month = now.getMonth() + 1;
+const todayStr = `${year}-${String(month).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+// 1日の曜日を取得 (0:日, 1:月, ..., 5:金, 6:土)
+const firstDayOfMonth = new Date(year, month - 1, 1).getDay();
+const daysInMonth = new Date(year, month, 0).getDate();
+
+// カレンダー表示用の配列作成
+const calendarDays = [];
+// 月初の空白
+for (let i = 0; i < firstDayOfMonth; i++) {
+  calendarDays.push(null);
+}
+// 日付を入れる
+for (let i = 1; i <= daysInMonth; i++) {
+  calendarDays.push(i);
+}
+
+const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+---
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ひらめき365｜大人の脳活</title>
+  </head>
+  <body>
+    <header>
+      <h1>ひらめき365</h1>
+      <p class="subtitle">大人の脳活・記憶力トレーニング</p>
+      <div class="current-month">{year}年{month}月</div>
+    </header>
+
+    <main>
+      <div class="calendar-grid">
+        {weekdays.map((wd) => (
+          <div class={`weekday-header ${wd === '日' ? 'sun' : wd === '土' ? 'sat' : ''}`}>
+            {wd}
+          </div>
+        ))}
+
+        {calendarDays.map((day) => {
+          if (day === null) return <div class="calendar-day empty"></div>;
+
+          const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          const post = postsMap[dateStr];
+          const isToday = dateStr === todayStr;
+          const isFuture = new Date(dateStr) > now;
+
+          return (
+            <div class={`calendar-day ${isToday ? 'today' : ''} ${!post || isFuture ? 'no-content' : ''}`} data-date={dateStr}>
+              {post && !isFuture ? (
+                <a href={`/blog/${dateStr}`} class="day-link">
+                  <span class="day-number">{day}</span>
+                  <span class="day-label">✏️</span>
+                </a>
+              ) : (
+                <div class="day-disabled">
+                  <span class="day-number">{day}</span>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </main>
+
+    <footer>
+      <p>© 2026 ひらめき365 事務局</p>
+    </footer>
+
+    <script>
+      // localStorageから結果を読み取ってカレンダーに反映
+      const results = JSON.parse(localStorage.getItem('hirameki365-results') || '{}');
+      
+      Object.keys(results).forEach(date => {
+        const data = results[date];
+        // 互換性維持：古い形式（文字列）と新しい形式（オブジェクト）の両方に対応
+        const status = typeof data === 'string' ? data : data.status;
+        const score = typeof data === 'object' ? data.score : (status === 'passed' ? 7 : '?');
+
+        const dayEl = document.querySelector(`.calendar-day[data-date="${date}"]`);
+        if (dayEl) {
+          dayEl.classList.add(`status-${status}`);
+          const label = dayEl.querySelector('.day-label');
+          if (label) {
+            // 「●/7」形式で表示、パーフェクトならアイコン追加
+            let resultText = `${score}/7`;
+            if (status === 'passed') resultText += ' 💮';
+            
+            label.textContent = resultText;
+            label.classList.add('is-completed');
+          }
+        }
+      });
+    </script>
+  </body>
+</html>
+
+<style>
+  body { padding: 1.5rem; max-width: 800px; margin: 0 auto; background-color: var(--color-bg-ivory); }
+  header { text-align: center; margin-bottom: 2rem; }
+  h1 { color: var(--color-primary-navy); font-size: 2.5rem; margin-bottom: 0.2rem; }
+  .subtitle { color: var(--color-primary-green); font-weight: bold; font-size: 1.1rem; margin-bottom: 1rem; }
+  .current-month { 
+    display: inline-block; padding: 0.5rem 2rem; background-color: var(--color-primary-navy); 
+    color: white; border-radius: 50px; font-weight: bold; font-size: 1.2rem;
+  }
+
+  .calendar-grid { 
+    display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; 
+    background: white; padding: 12px; border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 2px solid var(--color-border);
+    width: 100%; box-sizing: border-box;
+  }
+
+  .weekday-header { 
+    text-align: center; font-weight: bold; padding: 12px 0; border-bottom: 2px solid var(--color-border);
+    font-size: 1.1rem; min-width: 0;
+  }
+  .weekday-header.sun { color: var(--color-stamp-red); }
+  .weekday-header.sat { color: #2D4A9E; }
+
+  .calendar-day { 
+    aspect-ratio: 1 / 1; min-height: 60px; display: flex; flex-direction: column; 
+    border-radius: 8px; border: 1px solid var(--color-border); position: relative;
+    overflow: hidden; box-sizing: border-box;
+  }
+
+  .day-link {
+    width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-decoration: none; color: var(--color-primary-navy); background: white; transition: background 0.2s;
+  }
+  .day-link:hover { background-color: #FFFDF0; }
+  
+  .day-number { font-size: 1.4rem; font-weight: bold; line-height: 1; z-index: 1; }
+  
+  /* 絵文字ラベルのスタイル */
+  .day-label { font-size: 1.2rem; margin-top: 4px; z-index: 1; transition: all 0.3s; }
+  .day-label.is-completed { 
+    font-size: 0.9rem; /* スコア表示用に小さく調整 */
+    margin-top: 4px;
+    font-weight: bold;
+    color: var(--color-primary-navy);
+  }
+
+  .calendar-day.today { border: 3px solid var(--color-accent-gold); background-color: #FFF9E6; }
+  .calendar-day.today::after {
+    content: "今日"; position: absolute; top: 2px; right: 2px; 
+    font-size: 0.6rem; background: var(--color-accent-gold); color: white;
+    padding: 1px 4px; border-radius: 4px; z-index: 2;
+  }
+
+  .day-disabled {
+    width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+    color: #CCC; background: #F5F5F5; cursor: not-allowed;
+  }
+
+  .empty { border: none; background: transparent; }
+
+  footer { text-align: center; margin-top: 3rem; color: #666; font-size: 0.9rem; }
+
+  @media (max-width: 600px) {
+    body { padding: 1rem; }
+    .day-number { font-size: 1.1rem; }
+    .day-label { font-size: 0.9rem; } /* スマホでも表示されるように修正 */
+    .day-label.is-completed { font-size: 0.7rem; }
+    h1 { font-size: 2rem; }
+  }
+</style>

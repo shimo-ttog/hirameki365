@@ -1,0 +1,113 @@
+﻿:root {
+  /* --- カラーパレット (WCAG AA 準拠) --- */
+  --color-bg-ivory: #F9F8F1; /* 和紙のようなアイボリー */
+  --color-text-main: #1A1C1E; /* 深い墨色 */
+  --color-primary-navy: #1B2C4E; /* 品格のある濃紺 */
+  --color-primary-green: #2D4A22; /* 落ち着いた常盤色 */
+  --color-accent-gold: #B8860B; /* 達成感を表す金茶色 */
+  --color-stamp-red: #C43C32; /* 伝統的な印影の赤 */
+  --color-border: #D1CEC0;
+  --color-white: #FFFFFF;
+
+  /* --- タイポグラフィ --- */
+  --font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --font-size-base: 18px; /* 大人世代向け最小規定 */
+  --font-size-md: 20px;
+  --font-size-lg: 24px;
+  --font-size-xl: 32px;
+  --line-height-relaxed: 1.8;
+  --letter-spacing-wide: 0.05em;
+
+  /* --- レイアウト & スペーシング --- */
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 32px;
+  --border-radius-sm: 4px;
+  --border-radius-md: 8px;
+  --min-tap-target: 44px;
+}
+
+/* 基本スタイル */
+body {
+  background-color: var(--color-bg-ivory);
+  color: var(--color-text-main);
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-relaxed);
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+/* 押し間違いを防ぐボタンのスタイル */
+.btn-adult {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px; /* 44px以上の余裕を確保 */
+  min-width: 160px;
+  padding: 12px 24px;
+  font-size: var(--font-size-md);
+  font-weight: bold;
+  text-decoration: none;
+  border: 2px solid var(--color-primary-navy);
+  border-radius: var(--border-radius-md);
+  background-color: var(--color-white);
+  color: var(--color-primary-navy);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 0 var(--color-primary-navy);
+  margin-bottom: 4px;
+}
+
+.btn-adult:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 var(--color-primary-navy);
+}
+
+.btn-adult-primary {
+  background-color: var(--color-primary-navy);
+  color: var(--color-white);
+  box-shadow: 0 4px 0 #0D1626;
+}
+
+/* 印刷最適化 (A4一枚に収める設定) */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 15mm;
+  }
+  body {
+    background-color: #FFFFFF !important;
+    color: #000000 !important;
+  }
+  header, footer, nav, .btn-adult {
+    display: none !important;
+  }
+}
+
+/* 成功時の演出（スタンプ） */
+.stamp-success {
+  width: 120px;
+  height: 120px;
+  border: 4px double var(--color-stamp-red);
+  border-radius: 50%;
+  color: var(--color-stamp-red);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  transform: rotate(-15deg);
+  opacity: 0.8;
+  animation: stamp-drop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes stamp-drop {
+  0% { transform: scale(3) rotate(0deg); opacity: 0; }
+  100% { transform: scale(1) rotate(-15deg); opacity: 0.8; }
+}
+
+/*
+  画像生成用プロンプト：
+  Japanese rubber stamp "たいへんよくできました" (Means Great Job), circular design, 
+  traditional red cinnabar ink texture, double-circle border, elegant cherry blossom petals motif, 
+  distressed vintage woodblock print style, pure white background, 4k.
+*/
