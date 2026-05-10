@@ -27,14 +27,17 @@ const { Content } = post;
   </head>
   <body>
     <div class="top-controls no-print">
-      <div class="sound-control">
-        <button id="sound-toggle" class="control-btn" title="音声を切り替える">🔊 音あり</button>
-      </div>
-      <div class="font-size-controls">
-        <span>文字サイズ：</span>
-        <button class="font-btn active" data-size="normal">標準</button>
-        <button class="font-btn" data-size="large">大</button>
-        <button class="font-btn" data-size="xlarge">特大</button>
+      <button id="menu-toggle" class="control-btn menu-btn">⚙️ 設定</button>
+      <div id="controls-panel" class="controls-content">
+        <div class="sound-control">
+          <button id="sound-toggle" class="control-btn" title="音声を切り替える">🔊 音あり</button>
+        </div>
+        <div class="font-size-controls">
+          <span>文字サイズ：</span>
+          <button class="font-btn active" data-size="normal">標準</button>
+          <button class="font-btn" data-size="large">大</button>
+          <button class="font-btn" data-size="xlarge">特大</button>
+        </div>
       </div>
     </div>
 
@@ -90,7 +93,7 @@ const { Content } = post;
       </div>
 
       <footer class="no-print" style="text-align: center; margin-top: 3rem; color: #666; font-size: 0.8rem;">
-        <p>© 2026 ひらめき365 事務局 v0.1.7</p>
+        <p>© 2026 ひらめき365 事務局 v0.1.8</p>
       </footer>
     </article>
 
@@ -355,6 +358,14 @@ const { Content } = post;
       applyFontSize(savedSize);
       fontBtns.forEach(btn => btn.addEventListener('click', () => applyFontSize(btn.dataset.size)));
 
+      // メニュー開閉ロジック
+      const menuToggle = document.getElementById('menu-toggle');
+      const controlsPanel = document.getElementById('controls-panel');
+      menuToggle?.addEventListener('click', () => {
+        controlsPanel?.classList.toggle('open');
+        menuToggle.textContent = controlsPanel?.classList.contains('open') ? '❌ 閉じる' : '⚙️ 設定';
+      });
+
       // 起動
       showStep(1);
       setupEventListeners();
@@ -367,8 +378,11 @@ body { padding: 2rem; max-width: 800px; margin: 0 auto; background: var(--color-
 
 .top-controls {
   display: flex; align-items: center; justify-content: flex-end;
-  gap: 1.5rem; margin-bottom: 1rem;
+  gap: 1.5rem; margin-bottom: 1rem; position: relative;
 }
+
+.controls-content { display: flex; align-items: center; gap: 1.5rem; }
+.menu-btn { display: none; }
 
 .font-size-controls {
   display: flex; align-items: center;
@@ -496,11 +510,19 @@ article { background: white; padding: 2.5rem; border-radius: 24px; box-shadow: 0
   body { padding: 0.5rem; overflow-x: hidden; }
   article { padding: 1.5rem 0.8rem; border-radius: 8px; width: 100%; box-sizing: border-box; margin: 0; }
   
-  .top-controls {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.8rem;
+  .menu-btn { display: block; z-index: 101; }
+  .controls-content {
+    display: none;
+    position: absolute; top: 100%; right: 0;
+    background: white; border: 2px solid var(--color-primary-navy);
+    border-radius: 12px; padding: 1rem;
+    flex-direction: column; align-items: stretch;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    z-index: 100; min-width: 200px;
   }
+  .controls-content.open { display: flex; }
+  
+  .top-controls { margin-bottom: 0.5rem; }
   .font-size-controls {
     justify-content: space-between;
     font-size: 0.9rem;
