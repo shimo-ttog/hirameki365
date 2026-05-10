@@ -277,10 +277,20 @@ const { Content } = post;
         showStep('final');
         const scoreText = document.getElementById('final-score-text');
         const stampContainer = document.getElementById('final-stamp-container');
-        const allCorrect = score === totalSteps;
+        
+        // 全問正解数を再集計（二重加算防止）
+        let finalScore = 0;
+        document.querySelectorAll('.question-block').forEach((block) => {
+          const mark = block.querySelector('.judgment-mark');
+          if (mark && mark.classList.contains('correct')) {
+            finalScore++;
+          }
+        });
+        
+        const allCorrect = finalScore === totalSteps;
 
         if (scoreText) {
-          let message = `全 ${totalSteps} 問中 <span style="font-size: 2rem; color: var(--color-stamp-red);">${score}</span> 問正解でした！`;
+          let message = `全 ${totalSteps} 問中 <span style="font-size: 2rem; color: var(--color-stamp-red);">${finalScore}</span> 問正解でした！`;
           if (allCorrect) {
             message += '<br><span style="color: var(--color-stamp-red); font-weight: bold;">パーフェクト！素晴らしいです！</span>';
           } else {
@@ -302,7 +312,7 @@ const { Content } = post;
         const shareSection = document.getElementById('share-section');
         if (shareSection) {
           shareSection.classList.remove('hidden');
-          const shareText = `ひらめき365：今日の脳活結果は【全 ${totalSteps} 問中 ${score} 問正解】でした！💮\n#ひらめき365 #脳トレ\n`;
+          const shareText = `ひらめき365：今日の脳活結果は【全 ${totalSteps} 問中 ${finalScore} 問正解】でした！💮\n#ひらめき365 #脳トレ\n`;
           const shareUrl = window.location.origin;
 
           const lineBtn = document.getElementById('share-line');
@@ -320,7 +330,7 @@ const { Content } = post;
         const results = JSON.parse(localStorage.getItem('hirameki365-results') || '{}');
         results[slug] = {
           status: allCorrect ? 'passed' : 'tried',
-          score: score
+          score: finalScore
         };
         localStorage.setItem('hirameki365-results', JSON.stringify(results));
 
