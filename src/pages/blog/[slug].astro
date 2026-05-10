@@ -89,7 +89,7 @@ const { Content } = post;
       </div>
 
       <footer class="no-print" style="text-align: center; margin-top: 3rem; color: #666; font-size: 0.8rem;">
-        <p>© 2026 ひらめき365 事務局 v0.1.2</p>
+        <p>© 2026 ひらめき365 事務局 v0.1.4</p>
       </footer>
     </article>
 
@@ -147,24 +147,25 @@ const { Content } = post;
         console.log(`Original: ${str} -> Normalized: ${normalized}`);
         return normalized;
       }
-function showStep(step) {
-  document.querySelectorAll('.quiz-step').forEach(el => el.style.display = 'none');
-  const stepEl = document.querySelector(`.quiz-step[data-step="${step}"]`);
-  if (stepEl) {
-    stepEl.style.display = 'block';
-    window.scrollTo(0, 0);
 
-    // テキスト入力欄があれば自動フォーカス
-    const input = stepEl.querySelector('.user-answer-input');
-    if (input) {
-      (input as HTMLInputElement).focus();
-    }
+      function showStep(step) {
+        document.querySelectorAll('.quiz-step').forEach(el => el.style.display = 'none');
+        const stepEl = document.querySelector(`.quiz-step[data-step="${step}"]`);
+        if (stepEl) {
+          stepEl.style.display = 'block';
+          window.scrollTo(0, 0);
+          
+          // テキスト入力欄があれば自動フォーカス
+          const input = stepEl.querySelector('.user-answer-input');
+          if (input) {
+            input.focus();
+          }
 
-    bindSpeechButtons(stepEl);
-  }
-}
+          bindSpeechButtons(stepEl);
+        }
+      }
 
-function bindSpeechButtons(container) {
+      function bindSpeechButtons(container) {
         container.querySelectorAll('.question-block').forEach((block) => {
           if (block.querySelector('.speech-btn')) return;
           
@@ -210,10 +211,10 @@ function bindSpeechButtons(container) {
         // テキスト入力欄のEnterキー対応
         document.querySelectorAll('.user-answer-input').forEach(input => {
           input.addEventListener('keydown', (e) => {
-            if ((e as KeyboardEvent).key === 'Enter') {
-              const step = (input.closest('.quiz-step') as HTMLElement).dataset.step;
+            if (e.key === 'Enter') {
+              const step = input.closest('.quiz-step').dataset.step;
               const judgeBtn = document.querySelector(`.judge-btn[data-step="${step}"]`);
-              if (judgeBtn) (judgeBtn as HTMLElement).click();
+              if (judgeBtn) judgeBtn.click();
             }
           });
         });
@@ -308,14 +309,14 @@ function bindSpeechButtons(container) {
           const xBtn = document.getElementById('share-x');
 
           if (lineBtn) {
-            (lineBtn as HTMLAnchorElement).href = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`;
+            lineBtn.href = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`;
           }
           if (xBtn) {
-            (xBtn as HTMLAnchorElement).href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+            xBtn.href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
           }
         }
         
-        const slug = window.location.pathname.split('/').pop();
+        const slug = window.location.pathname.split('/').filter(Boolean).pop();
         const results = JSON.parse(localStorage.getItem('hirameki365-results') || '{}');
         results[slug] = {
           status: allCorrect ? 'passed' : 'tried',
