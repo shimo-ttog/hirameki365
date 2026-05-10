@@ -470,5 +470,37 @@ h1 { color: var(--color-primary-navy); font-size: 1.8rem; border-bottom: 4px sol
 .btn-outline { background: white; color: var(--color-primary-navy); border: 2px solid var(--color-primary-navy); font-size: 1.3rem; padding: 1rem 2rem; }
 
 @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+@media (max-width: 600px) {
+  body { padding: 0.5rem; }
+  article { padding: 1.5rem 1rem; border-radius: 12px; }
+  h1 { font-size: 1.4rem; margin-bottom: 1.5rem; }
+  
+  .top-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.8rem;
+  }
+  .font-size-controls {
+    justify-content: space-between;
+    font-size: 0.9rem;
+  }
+  .font-btn, .control-btn {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.9rem;
+  }
+
+  :global(.question-text) { font-size: 1.15rem; padding-right: 0; margin-top: 2rem; }
+  :global(.speech-btn) { top: -0.5rem; right: 0; width: 40px; height: 40px; }
+  :global(.user-answer-input) { font-size: 1.3rem; padding: 0.6rem; }
+  :global(.choice-label) { padding: 0.8rem; font-size: 1.1rem; }
+  :global(.step-nav) { flex-direction: column; }
+  :global(.step-nav .btn-adult) { width: 100%; }
+
+  /* 特大サイズ時の微調整 */
+  body.font-xlarge :global(.question-text) { font-size: 1.4rem; }
+  body.font-xlarge :global(.user-answer-input) { font-size: 1.6rem; }
+}
+
 @media print { .font-size-controls, .step-nav, .speech-btn, .btn-adult { display: none !important; } .quiz-step { display: block !important; } }
 </style>
