@@ -1,29 +1,26 @@
 ---
 import '../../styles/design-tokens.css';
+import { getCollection, render } from 'astro:content';
+import pkg from '../../../package.json';
 
-// この関数が動的ルートには必須です
 export async function getStaticPaths() {
-  const posts = Object.values(import.meta.glob('../../content/blog/*.md', { eager: true }));
-  
-  return posts.map((post: any) => {
-    const fileName = post.file.split(/[\\/]/).pop();
-    const slug = fileName.replace('.md', '');
-    
-    return {
-      params: { slug },
-      props: { post },
-    };
-  });
+  const blogEntries = await getCollection('blog');
+  return blogEntries.map(entry => ({
+    params: { slug: entry.id }, props: { entry },
+  }));
 }
 
-const { post } = Astro.props;
-const { Content } = post;
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+
+// バージョン情報を取得
+const version = pkg.version;
 ---
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{post.frontmatter.title}</title>
+    <title>{entry.data.title}</title>
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/icon.svg" />
     <meta name="theme-color" content="#1B2C4E" />
@@ -43,13 +40,18 @@ const { Content } = post;
           <button class="font-btn" data-size="large">大</button>
           <button class="font-btn" data-size="xlarge">特大</button>
         </div>
+        {import.meta.env.DEV && (
+          <div class="test-controls" style="margin-left: 1.5rem; padding-left: 1.5rem; border-left: 1px solid #ccc;">
+            <button id="test-reset-btn" class="control-btn" style="background-color: #ffeef0; border-color: #e74c3c; color: #e74c3c;">🔄 進捗リセット</button>
+          </div>
+        )}
       </div>
     </div>
 
     <article>
       <header class="quiz-header">
         <a href="/" class="site-logo">ひらめき365</a>
-        <h1 class="quiz-date">{post.frontmatter.title.replace('ひらめき365：', '')}</h1>
+        <h1 class="quiz-date">{entry.data.title.replace('ひらめき365：', '')}</h1>
       </header>
       
       <div class="brain-content">
@@ -58,8 +60,9 @@ const { Content } = post;
 
       <!-- 最終結果ステップをAstro側で定義（Markdownのパースエラー回避） -->
       <div class="quiz-step" data-step="final" style="display: none;">
+        <div id="already-answered-placeholder"></div>
         <div class="final-summary">
-          <h2>お疲れでした！</h2>
+          <h2>お疲れ様でした！</h2>
           <p id="final-score-text"></p>
           <div id="final-stamp-container" class="stamp-wrapper hidden">
             <div class="stamp-success">合格</div>
@@ -78,13 +81,13 @@ const { Content } = post;
 
         <div class="final-extra-content" style="width: 100%; text-align: center;">
           <h3>【今日の豆知識】</h3>
-          <p>{post.frontmatter.trivia}</p>
+          <p>{entry.data.trivia}</p>
 
           <hr>
           
           <div class="maxim-section">
             <h3>📜 今日の格言</h3>
-            <p class="maxim-text">{post.frontmatter.maxim}</p>
+            <p class="maxim-text">{entry.data.maxim}</p>
           </div>
         </div>
         
@@ -98,12 +101,15 @@ const { Content } = post;
       </div>
 
       <footer class="no-print" style="text-align: center; margin-top: 3rem; color: #666; font-size: 0.8rem;">
-        <p>© 2026 ひらめき365 事務局 v0.1.9</p>
+        <p>© 2026 ひらめき365 事務局 v0.7.0</p>
       </footer>
     </article>
 
     <script is:inline src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    <script>
+    <script define:vars={{ slug: entry.id }}>
+      // 起動時にサーバーから渡されたslugを使用
+      console.log(`[INIT] Quiz Page for: ${slug} (v0.7.0)`);
+
       // Service Workerの登録
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -119,9 +125,9 @@ const { Content } = post;
 
       // 効果音の設定 (フリー音源を使用)
       const sounds = {
-        correct: new Audio('/sounds/correct.mp3'), // 指定されたカスタム音源
-        incorrect: new Audio('/sounds/incorrect.mp3'), // 指定されたカスタム音源
-        perfect: new Audio('/sounds/perfect.mp3') // 指定されたカスタム音源
+        correct: new Audio('/sounds/correct.mp3'),
+        incorrect: new Audio('/sounds/incorrect.mp3'),
+        perfect: new Audio('/sounds/perfect.mp3')
       };
       
       let isMuted = localStorage.getItem('hirameki365-muted') === 'true';
@@ -156,13 +162,12 @@ const { Content } = post;
         if (!str) return '';
         const normalized = str
           .trim()
-          .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xfee0)) // 全角英数 -> 半角
-          .replace(/[\u30a1-\u30f6]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0x60)) // カタカナ -> ひらがな
-          .replace(/[円￥\\,，]/g, '') // 通貨記号、全角半角カンマ、単位「円」を除去
-          .replace(/曜日?/g, '') // 「木曜日」や「木曜」から「曜日」または「曜」を除去して「木」として判定
-          .replace(/[\s　]/g, '') // 空白除去
+          .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xfee0))
+          .replace(/[\u30a1-\u30f6]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0x60))
+          .replace(/[円￥\\,，]/g, '')
+          .replace(/曜日?/g, '')
+          .replace(/[\s　]/g, '')
           .toLowerCase();
-        console.log(`Original: ${str} -> Normalized: ${normalized}`);
         return normalized;
       }
 
@@ -173,7 +178,6 @@ const { Content } = post;
           stepEl.style.display = 'block';
           window.scrollTo(0, 0);
           
-          // テキスト入力欄があれば自動フォーカス
           const input = stepEl.querySelector('.user-answer-input');
           if (input) {
             input.focus();
@@ -192,7 +196,6 @@ const { Content } = post;
 
           const sectionTitle = block.closest('.quiz-step').querySelector('h3')?.textContent;
           let isKanjiQ = sectionTitle === '難読漢字';
-          let isRecollectionQ = sectionTitle === '昭和・平成回想';          
           if (isKanjiQ) {
             text = text.replace(/「(.+?)」/g, (match, p1) => {
               return '「' + '○'.repeat(p1.length).split('').join('、') + '」';
@@ -226,7 +229,6 @@ const { Content } = post;
       }
 
       function setupEventListeners() {
-        // テキスト入力欄のEnterキー対応
         document.querySelectorAll('.user-answer-input').forEach(input => {
           input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
@@ -237,22 +239,21 @@ const { Content } = post;
           });
         });
 
-        // 判定ボタン
         document.querySelectorAll('.judge-btn').forEach(btn => {
           btn.addEventListener('click', (e) => {
             const step = e.target.dataset.step;
             const block = document.querySelector(`.quiz-step[data-step="${step}"] .question-block`);
-            const correct = block.dataset.correct || '';
-            const input = block.querySelector('.user-answer-input');
-            const radios = block.querySelectorAll('.user-answer-radio');
-            const mark = block.querySelector('.judgment-mark');
-            const answerHidden = block.querySelector('.answer-hidden');
+            const correct = block?.dataset.correct || '';
+            const input = block?.querySelector('.user-answer-input');
+            const radios = block?.querySelectorAll('.user-answer-radio');
+            const mark = block?.querySelector('.judgment-mark');
+            const answerHidden = block?.querySelector('.answer-hidden');
             const nextBtn = document.querySelector(`.next-btn[data-step="${step}"]`);
             
             let userAnswer = '';
             if (input) {
               userAnswer = input.value;
-            } else if (radios.length > 0) {
+            } else if (radios && radios.length > 0) {
               const checked = Array.from(radios).find((r) => r.checked);
               userAnswer = checked ? checked.value : '';
             }
@@ -272,17 +273,19 @@ const { Content } = post;
               mark.className = 'judgment-mark ' + (isCorrect ? 'correct' : 'incorrect');
             }
 
-            answerHidden.classList.add('reveal');
+            if (answerHidden) answerHidden.classList.add('reveal');
             btn.style.display = 'none';
             if (nextBtn) nextBtn.classList.remove('hidden');
+
+            saveProgress('playing', true);
           });
         });
 
-        // 次へボタン
         document.querySelectorAll('.next-btn').forEach(btn => {
           btn.addEventListener('click', () => {
             currentStep++;
             if (currentStep <= totalSteps) {
+              saveProgress('playing', false);
               showStep(currentStep);
             } else {
               showFinalResult();
@@ -291,12 +294,12 @@ const { Content } = post;
         });
       }
 
-      function showFinalResult() {
+      function showFinalResult(silent = false) {
         showStep('final');
         const scoreText = document.getElementById('final-score-text');
         const stampContainer = document.getElementById('final-stamp-container');
         
-        // 全問正解数を再集計（二重加算防止）
+        // 全問正解数を再集計
         let finalScore = 0;
         document.querySelectorAll('.question-block').forEach((block) => {
           const mark = block.querySelector('.judgment-mark');
@@ -317,7 +320,6 @@ const { Content } = post;
           scoreText.innerHTML = message;
         }
 
-        // 全問正解時のみスタンプを表示
         if (stampContainer) {
           if (allCorrect) {
             stampContainer.classList.remove('hidden');
@@ -326,39 +328,36 @@ const { Content } = post;
           }
         }
 
-        // 共有ボタンの表示と設定
-        const shareSection = document.getElementById('share-section');
-        if (shareSection) {
-          shareSection.classList.remove('hidden');
-          const shareText = `ひらめき365：今日の脳活結果は【全 ${totalSteps} 問中 ${finalScore} 問正解】でした！💮\n#ひらめき365 #脳トレ\n`;
-          const shareUrl = window.location.origin;
+        if (!silent) {
+          saveProgress(allCorrect ? 'passed' : 'tried', true);
+        }
 
-          const lineBtn = document.getElementById('share-line');
-          const xBtn = document.getElementById('share-x');
-
-          if (lineBtn) {
-            lineBtn.href = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`;
-          }
-          if (xBtn) {
-            xBtn.href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+        // 完了済みメッセージを常に表示
+        const placeholder = document.getElementById('already-answered-placeholder');
+        if (placeholder) {
+          const results = JSON.parse(localStorage.getItem('hirameki365-results') || '{}');
+          const currentStatus = results[slug]?.status;
+          
+          if (silent || currentStatus === 'passed' || currentStatus === 'tried') {
+            placeholder.innerHTML = `
+              <div style="padding: 1.2rem; margin-bottom: 2rem; background-color: #eef7ff; border: 4px solid var(--color-primary-navy); border-radius: 16px; color: var(--color-primary-navy); font-weight: bold; font-size: 1.5rem; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                ✅ この日のトレーニングは完了しています
+              </div>
+            `;
+          } else {
+            placeholder.innerHTML = '';
           }
         }
-        
-        const slug = window.location.pathname.split('/').filter(Boolean).pop();
-        const results = JSON.parse(localStorage.getItem('hirameki365-results') || '{}');
-        results[slug] = {
-          status: allCorrect ? 'passed' : 'tried',
-          score: finalScore
-        };
-        localStorage.setItem('hirameki365-results', JSON.stringify(results));
 
-        if (allCorrect && typeof confetti === 'function') {
+        const shareSection = document.getElementById('share-section');
+        if (shareSection) shareSection.classList.remove('hidden');
+
+        if (!silent && allCorrect && typeof confetti === 'function') {
           playSound('perfect');
           confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, zIndex: 9999 });
         }
       }
 
-      // 文字サイズ変更
       const fontBtns = document.querySelectorAll('.font-btn');
       function applyFontSize(size) {
         document.body.classList.remove('font-large', 'font-xlarge');
@@ -372,7 +371,6 @@ const { Content } = post;
       applyFontSize(savedSize);
       fontBtns.forEach(btn => btn.addEventListener('click', () => applyFontSize(btn.dataset.size)));
 
-      // メニュー開閉ロジック
       const menuToggle = document.getElementById('menu-toggle');
       const controlsPanel = document.getElementById('controls-panel');
       menuToggle?.addEventListener('click', () => {
@@ -380,8 +378,113 @@ const { Content } = post;
         menuToggle.textContent = controlsPanel?.classList.contains('open') ? '❌ 閉じる' : '⚙️ 設定';
       });
 
-      // 起動
-      showStep(1);
+      const resetBtn = document.getElementById('test-reset-btn');
+      resetBtn?.addEventListener('click', () => {
+        if (confirm('回答状況をリセットして最初からやり直しますか？（テスト環境専用）')) {
+          const results = JSON.parse(localStorage.getItem('hirameki365-results') || '{}');
+          delete results[slug];
+          localStorage.setItem('hirameki365-results', JSON.stringify(results));
+          window.location.reload();
+        }
+      });
+
+      function loadProgress() {
+        const results = JSON.parse(localStorage.getItem('hirameki365-results') || '{}');
+        const progress = results[slug];
+        const status = progress?.status;
+        const answers = progress?.answers || [];
+        
+        if (progress && (status === 'playing' || status === 'passed' || status === 'tried')) {
+          currentStep = progress.currentStep || 1;
+          const isJudged = progress.isJudged || false;
+          
+          for (let s = 1; s <= totalSteps; s++) {
+             const stepEl = document.querySelector(`.quiz-step[data-step="${s}"]`);
+             if (stepEl) {
+               const block = stepEl.querySelector('.question-block');
+               const answerHidden = block?.querySelector('.answer-hidden');
+               const judgeBtn = document.querySelector(`.judge-btn[data-step="${s}"]`);
+               const nextBtn = document.querySelector(`.next-btn[data-step="${s}"]`);
+               const mark = block?.querySelector('.judgment-mark');
+               
+               const isCorrect = answers[s-1] === true;
+               const isIncorrect = answers[s-1] === false;
+
+               // 回答済みの状態を復元
+               if (isCorrect || isIncorrect) {
+                 if (answerHidden) answerHidden.classList.add('reveal');
+                 if (judgeBtn) judgeBtn.style.display = 'none';
+                 if (nextBtn) nextBtn.classList.remove('hidden');
+                 if (mark) {
+                   mark.textContent = isCorrect ? '⭕️ 正解！' : '❌ おしい！';
+                   mark.className = 'judgment-mark ' + (isCorrect ? 'correct' : 'incorrect');
+                 }
+               }
+             }
+          }
+
+          if (isJudged && status === 'playing') {
+            if (currentStep < totalSteps) {
+              currentStep++;
+            } else {
+              showFinalResult(true);
+              return;
+            }
+          }
+
+          if (status === 'passed' || status === 'tried') {
+            showFinalResult(true);
+            return;
+          }
+        }
+        showStep(currentStep);
+      }
+
+      function saveProgress(status = 'playing', isJudged = false) {
+        try {
+          const results = JSON.parse(localStorage.getItem('hirameki365-results') || '{}');
+          
+          // ステータスの固定保護（一度 passed/tried になったら playing には戻さない）
+          const existing = results[slug];
+          const existingStatus = existing?.status;
+          if ((existingStatus === 'passed' || existingStatus === 'tried') && status === 'playing') {
+            console.log(`[SAVE-SKIPPED] Status is already '${existingStatus}', won't revert to 'playing'.`);
+            return;
+          }
+
+          // 正誤状況の収集
+          const questionResults = [];
+          let currentScore = 0;
+          document.querySelectorAll('.question-block').forEach((block) => {
+            const mark = block.querySelector('.judgment-mark');
+            if (mark?.classList.contains('correct')) {
+              questionResults.push(true);
+              currentScore++;
+            } else if (mark?.classList.contains('incorrect')) {
+              questionResults.push(false);
+            } else {
+              questionResults.push(null);
+            }
+          });
+
+          // データを保存
+          results[slug] = {
+            status: status,
+            score: currentScore,
+            currentStep: currentStep,
+            isJudged: isJudged,
+            answers: questionResults,
+            updatedAt: new Date().toISOString()
+          };
+          localStorage.setItem('hirameki365-results', JSON.stringify(results));
+          console.log(`[SAVE] Key: ${slug}, Status: ${status}, Score: ${currentScore}/7`);
+          console.table(results[slug]);
+        } catch (e) {
+          console.error('Save failed:', e);
+        }
+      }
+
+      loadProgress();
       setupEventListeners();
     </script>
   </body>
@@ -412,8 +515,28 @@ body { padding: 2rem; max-width: 800px; margin: 0 auto; background: var(--color-
 .font-btn.active { background: var(--color-primary-navy); color: white; }
 .control-btn:hover { background: #f0f7ff; }
 
-body.font-large { font-size: 1.2em; }
-body.font-xlarge { font-size: 1.4em; }
+/* 文字サイズ変更用クラス (design-tokens.cssに合わせて顕著に) */
+body.font-large { font-size: 22px !important; }
+body.font-xlarge { font-size: 28px !important; }
+
+/* クイズ内容（問題・入力・回答）のサイズ調整 */
+body.font-large :global(.question-text) { font-size: 1.6rem; }
+body.font-xlarge :global(.question-text) { font-size: 2.0rem; }
+
+body.font-large :global(.user-answer-input) { font-size: 1.8rem; }
+body.font-xlarge :global(.user-answer-input) { font-size: 2.2rem; }
+
+body.font-large :global(.choice-label) { font-size: 1.6rem; }
+body.font-xlarge :global(.choice-label) { font-size: 2.0rem; }
+
+body.font-large :global(.answer-hidden) { font-size: 1.5rem; }
+body.font-xlarge :global(.answer-hidden) { font-size: 1.8rem; }
+
+body.font-large :global(.explanation-text) { font-size: 1.3rem; }
+body.font-xlarge :global(.explanation-text) { font-size: 1.6rem; }
+
+body.font-large h1.quiz-date { font-size: 1.8rem; }
+body.font-xlarge h1.quiz-date { font-size: 2.2rem; }
 
 article { background: white; padding: 2.5rem; border-radius: 24px; box-shadow: 0 15px 35px rgba(0,0,0,0.07); min-height: 60vh; }
 
@@ -447,6 +570,18 @@ article { background: white; padding: 2.5rem; border-radius: 24px; box-shadow: 0
 
 :global(.answer-hidden) { margin-top: 1.5rem; padding: 1rem; background-color: #f0f0f0; border-radius: 8px; color: transparent; transition: all 0.6s ease; user-select: none; display: block; }
 :global(.answer-hidden.reveal) { color: var(--color-primary-navy); background-color: #eef7ff; border-left: 5px solid var(--color-primary-navy); user-select: text; }
+
+:global(.explanation-text) { 
+  opacity: 0; 
+  transition: opacity 0.6s ease;
+  margin-top: 0.8rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid rgba(27, 44, 78, 0.1);
+  font-size: 1.1rem;
+  line-height: 1.5;
+  color: #555;
+}
+:global(.answer-hidden.reveal .explanation-text) { opacity: 1; }
 
 :global(.maxim-section) { margin: 2rem 0; padding: 1.5rem; background-color: #fdfaf0; border: 2px dashed var(--color-primary-green); border-radius: 16px; text-align: center; }
 :global(.maxim-text) { font-size: 1.4rem; font-weight: bold; font-style: italic; }

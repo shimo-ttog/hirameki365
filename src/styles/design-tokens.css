@@ -35,7 +35,22 @@ body {
   font-size: var(--font-size-base);
   line-height: var(--line-height-relaxed);
   letter-spacing: var(--letter-spacing-wide);
+  transition: font-size 0.2s ease;
 }
+
+/* 文字サイズ変更用クラス (より顕著な変化に調整) */
+body.font-large {
+  font-size: 22px; /* 標準 18px から大幅アップ */
+}
+body.font-xlarge {
+  font-size: 28px; /* 特大サイズ */
+}
+
+/* 各要素の相対的なサイズ調整 */
+body.font-large h1 { font-size: 3rem; }
+body.font-xlarge h1 { font-size: 3.5rem; }
+body.font-large .calendar-day { min-height: 80px; }
+body.font-xlarge .calendar-day { min-height: 100px; }
 
 /* 押し間違いを防ぐボタンのスタイル */
 .btn-adult {

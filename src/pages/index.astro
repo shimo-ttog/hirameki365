@@ -1,12 +1,15 @@
 ---
 import '../styles/design-tokens.css';
+import { getCollection } from 'astro:content';
+import pkg from '../../package.json';
+
 // 全てのMarkdown記事を取得
-const posts = Object.values(import.meta.glob('../content/blog/*.md', { eager: true }));
+const blogEntries = await getCollection('blog');
 
 // 記事を日付でマッピング
 const postsMap = {};
-posts.forEach((post) => {
-  postsMap[post.frontmatter.date] = post;
+blogEntries.forEach((entry) => {
+  postsMap[entry.data.date] = entry;
 });
 
 // 現在のシステム日付を取得
@@ -26,11 +29,14 @@ for (let i = 0; i < firstDayOfMonth; i++) {
   calendarDays.push(null);
 }
 // 日付を入れる
-for (let i = 1; i <= daysInMonth; i++) {
-  calendarDays.push(i);
+for (let j = 1; j <= daysInMonth; j++) {
+  calendarDays.push(j);
 }
 
 const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+
+// バージョン情報を取得
+const version = pkg.version;
 ---
 <html lang="ja">
   <head>
@@ -44,17 +50,19 @@ const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   </head>
   <body>
-    <!-- インストールバナー -->
-    <div id="install-banner" class="install-banner hidden">
-      <div class="install-content">
-        <span class="install-icon">💡</span>
-        <div class="install-text">
-          <p class="install-title">ホーム画面に追加しませんか？</p>
-          <p class="install-desc">アプリとして保存して、毎朝スムーズに脳活を始めましょう。</p>
+    <!-- 文字サイズ設定 -->
+    <div class="top-controls no-print">
+      {import.meta.env.DEV && (
+        <div class="test-controls" style="margin-right: auto; padding-left: 1rem;">
+          <button id="test-clear-all" class="font-btn" style="background-color: #ffeef0; color: #e74c3c; border-color: #e74c3c;">⚠️ 全データを消去</button>
         </div>
+      )}
+      <div class="font-size-controls">
+        <span>文字サイズ：</span>
+        <button class="font-btn active" data-size="normal">標準</button>
+        <button class="font-btn" data-size="large">大</button>
+        <button class="font-btn" data-size="xlarge">特大</button>
       </div>
-      <button id="install-btn" class="install-action-btn">追加する</button>
-      <button id="install-close" class="install-close-btn">×</button>
     </div>
 
     <header>
@@ -80,9 +88,9 @@ const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
           const isFuture = new Date(dateStr) > now;
 
           return (
-            <div class={`calendar-day ${isToday ? 'today' : ''} ${!post || isFuture ? 'no-content' : ''}`} data-date={dateStr}>
-              {post && !isFuture ? (
-                <a href={`/blog/${dateStr}`} class="day-link">
+            <div class={`calendar-day ${isToday ? 'today' : ''} ${!post ? 'no-content' : ''}`} data-date={post ? post.id : dateStr}>
+              {post ? (
+                <a href={`/blog/${post.id}`} class="day-link">
                   <span class="day-number">{day}</span>
                   <span class="day-label">✏️</span>
                 </a>
@@ -93,84 +101,175 @@ const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
               )}
             </div>
           );
+
         })}
       </div>
     </main>
 
     <footer>
-      <p>© 2026 ひらめき365 事務局 <span class="version">v0.1.9</span></p>
+      <p>© 2026 ひらめき365 事務局 <span class="version">v0.7.2</span></p>
     </footer>
 
     <script>
-      // インストールバナーの制御
-      let deferredPrompt;
-      const installBanner = document.getElementById('install-banner');
-      const installBtn = document.getElementById('install-btn');
-      const installClose = document.getElementById('install-close');
+      // 文字サイズ変更の制御
+      const fontBtns = document.querySelectorAll('.font-btn');
+      function applyFontSize(size) {
+        document.body.classList.remove('font-large', 'font-xlarge');
+        if (size === 'large') document.body.classList.add('font-large');
+        if (size === 'xlarge') document.body.classList.add('font-xlarge');
+        fontBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.size === size));
+        localStorage.setItem('hirameki365-fontsize', size);
+      }
 
-      window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        // バナーを表示
-        if (localStorage.getItem('hirameki365-install-dismissed') !== 'true') {
-          installBanner?.classList.remove('hidden');
+      const savedSize = localStorage.getItem('hirameki365-fontsize') || 'normal';
+      applyFontSize(savedSize);
+      fontBtns.forEach(btn => btn.addEventListener('click', () => applyFontSize(btn.dataset.size)));
+
+      // 全データ消去機能（テスト用）
+      document.getElementById('test-clear-all')?.addEventListener('click', () => {
+        if (confirm('すべての回答記録を消去して初期状態に戻しますか？')) {
+          localStorage.removeItem('hirameki365-results');
+          window.location.reload();
         }
-      });
-
-      installBtn?.addEventListener('click', async () => {
-        if (deferredPrompt) {
-          deferredPrompt.prompt();
-          const { outcome } = await deferredPrompt.userChoice;
-          if (outcome === 'accepted') {
-            installBanner?.classList.add('hidden');
-          }
-          deferredPrompt = null;
-        }
-      });
-
-      installClose?.addEventListener('click', () => {
-        installBanner?.classList.add('hidden');
-        localStorage.setItem('hirameki365-install-dismissed', 'true');
       });
 
       // Service Workerの登録
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(err => {
+          navigator.serviceWorker.register('/sw.js').then(reg => {
+            // 新しいSWが見つかった時の処理
+            reg.addEventListener('updatefound', () => {
+              const newWorker = reg.installing;
+              newWorker?.addEventListener('statechange', () => {
+                if (newWorker.state === 'activated') {
+                  // 新しいバージョンが有効になったらリロードを促すか自動リロード
+                  console.log('New version available, reloading...');
+                  window.location.reload();
+                }
+              });
+            });
+          }).catch(err => {
             console.log('SW registration failed:', err);
           });
+        });
+
+        // SWが更新されたらページを自動リロードする
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!refreshing) {
+            window.location.reload();
+            refreshing = true;
+          }
         });
       }
 
       // localStorageから結果を読み取ってカレンダーに反映
-      const results = JSON.parse(localStorage.getItem('hirameki365-results') || '{}');
-      
-      Object.keys(results).forEach(date => {
-        const data = results[date];
-        // 互換性維持：古い形式（文字列）と新しい形式（オブジェクト）の両方に対応
-        const status = typeof data === 'string' ? data : data.status;
-        const score = typeof data === 'object' ? data.score : (status === 'passed' ? 7 : '?');
+      function syncCalendar() {
+        const resultsRaw = localStorage.getItem('hirameki365-results');
+        const results = JSON.parse(resultsRaw || '{}');
+        
+        console.group('Calendar Sync (v0.7.2)');
+        console.log('Current Storage:', results);
+        
+        // 全ての日付要素を取得してループ
+        const days = document.querySelectorAll('.calendar-day[data-date]');
+        console.log(`Checking ${days.length} calendar days...`);
 
-        const dayEl = document.querySelector(`.calendar-day[data-date="${date}"]`);
-        if (dayEl) {
-          dayEl.classList.add(`status-${status}`);
+        days.forEach((dayEl) => {
+          const date = dayEl.dataset.date;
+          const data = results[date];
           const label = dayEl.querySelector('.day-label');
+          
+          // 既存の状態を完全にリセット
+          dayEl.classList.remove('status-playing', 'status-passed', 'status-tried');
           if (label) {
-            // 「●/7」形式で表示、パーフェクトならアイコン追加
-            let resultText = `${score}/7`;
-            if (status === 'passed') resultText += ' 💮';
-            
-            label.textContent = resultText;
-            label.classList.add('is-completed');
+            label.classList.remove('is-completed');
+            label.textContent = '✏️'; // デフォルトアイコン
+            label.style.fontSize = '';
+            label.style.color = '';
           }
+
+          if (!data) return;
+
+          // ステータスの解析
+          let status = '';
+          let score = 0;
+          if (typeof data === 'string') {
+            status = data;
+            score = (status === 'passed' ? 7 : 0);
+          } else {
+            status = data.status || '';
+            score = data.score || 0;
+          }
+
+          if (status) {
+            console.log(`Match found for ${date}:`, { status, score });
+            dayEl.classList.add(`status-${status}`);
+            if (label) {
+              if (status === 'playing') {
+                label.textContent = '回答中';
+                label.style.fontSize = '0.8rem';
+                label.style.color = 'var(--color-accent-gold)';
+              } else if (status === 'passed' || status === 'tried') {
+                let resultText = `${score}/7`;
+                if (status === 'passed') resultText += ' 💮';
+                label.textContent = resultText;
+                label.classList.add('is-completed');
+                
+                const link = dayEl.querySelector('.day-link');
+                if (link) link.setAttribute('title', '結果を見る');
+              }
+            }
+          }
+        });
+        console.groupEnd();
+      }
+
+      // 初回実行と、戻るボタン（bfcache）対策
+      document.addEventListener('DOMContentLoaded', syncCalendar);
+      window.addEventListener('pageshow', (event) => {
+        console.log('[EVENT] pageshow', { persisted: event.persisted });
+        syncCalendar();
+      });
+
+      // 他のタブでの変更を検知
+      window.addEventListener('storage', (event) => {
+        if (event.key === 'hirameki365-results') {
+          console.log('[STORAGE] 外部での変更を検知しました。再同期します。');
+          syncCalendar();
         }
       });
     </script>
   </body>
 </html>
 
-<style>
+  <style>
   body { padding: 1.5rem; max-width: 800px; margin: 0 auto; background-color: var(--color-bg-ivory); }
+  
+  /* 画面上部の設定コントロール */
+  .top-controls {
+    display: flex; justify-content: flex-end; margin-bottom: 1rem;
+  }
+  .font-size-controls {
+    display: flex; align-items: center; gap: 0.5rem; font-weight: bold; color: var(--color-primary-navy);
+  }
+  .font-btn {
+    padding: 0.4rem 0.8rem; border: 2px solid var(--color-primary-navy);
+    background: white; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9rem;
+    transition: all 0.2s;
+  }
+  .font-btn.active { background: var(--color-primary-navy); color: white; }
+
+  /* 文字サイズ変更用クラス (顕著な変化) */
+  body.font-large { font-size: 22px !important; }
+  body.font-xlarge { font-size: 28px !important; }
+
+  /* 要素ごとの調整 */
+  body.font-large h1 { font-size: 3rem; }
+  body.font-xlarge h1 { font-size: 3.5rem; }
+  body.font-large .calendar-day { min-height: 80px; }
+  body.font-xlarge .calendar-day { min-height: 100px; }
+
   header { text-align: center; margin-bottom: 2rem; }
   h1 { color: var(--color-primary-navy); font-size: 2.5rem; margin-bottom: 0.2rem; }
   .subtitle { color: var(--color-primary-green); font-weight: bold; font-size: 1.1rem; margin-bottom: 1rem; }
@@ -178,29 +277,6 @@ const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
     display: inline-block; padding: 0.5rem 2rem; background-color: var(--color-primary-navy); 
     color: white; border-radius: 50px; font-weight: bold; font-size: 1.2rem;
   }
-
-  /* インストールバナーのスタイル */
-  .install-banner {
-    position: fixed; top: 1rem; left: 50%; transform: translateX(-50%);
-    width: 90%; max-width: 500px; background: white; border: 2px solid var(--color-primary-navy);
-    border-radius: 16px; padding: 1rem; display: flex; align-items: center; justify-content: space-between;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.15); z-index: 2000; animation: slideDown 0.5s ease-out;
-  }
-  .hidden { display: none !important; }
-  .install-content { display: flex; align-items: center; gap: 0.8rem; }
-  .install-icon { font-size: 2rem; }
-  .install-text { text-align: left; }
-  .install-title { font-weight: bold; font-size: 1rem; margin: 0; color: var(--color-primary-navy); }
-  .install-desc { font-size: 0.8rem; margin: 0; color: #666; }
-  .install-action-btn { 
-    background: var(--color-primary-navy); color: white; border: none; padding: 0.5rem 1rem;
-    border-radius: 8px; font-weight: bold; cursor: pointer; white-space: nowrap;
-  }
-  .install-close-btn { 
-    background: none; border: none; font-size: 1.5rem; color: #999; cursor: pointer; padding-left: 0.5rem;
-  }
-
-  @keyframes slideDown { from { top: -100px; } to { top: 1rem; } }
 
   .calendar-grid { 
     display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; 
@@ -244,6 +320,21 @@ const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
     content: "今日"; position: absolute; top: 2px; right: 2px; 
     font-size: 0.6rem; background: var(--color-accent-gold); color: white;
     padding: 1px 4px; border-radius: 4px; z-index: 2;
+  }
+
+  /* 進行中（回答途中）のスタイル */
+  .calendar-day.status-playing {
+    background-color: #fffde6;
+    border: 2px dashed var(--color-accent-gold);
+  }
+
+  /* 完了済み（回答済み）のスタイル */
+  .calendar-day.status-passed, .calendar-day.status-tried {
+    background-color: #f5f5f5;
+  }
+  .calendar-day.status-passed .day-link:hover, 
+  .calendar-day.status-tried .day-link:hover {
+    background-color: #eee;
   }
 
   .day-disabled {
