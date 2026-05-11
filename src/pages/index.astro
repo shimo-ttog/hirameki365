@@ -84,18 +84,16 @@ const version = pkg.version;
 
           const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
           const post = postsMap[dateStr];
-          const isToday = dateStr === todayStr;
-          const isFuture = dateStr > todayStr;
 
           return (
-            <div class={`calendar-day ${isToday ? 'today' : ''} ${isFuture ? 'future' : ''} ${!post ? 'no-content' : ''}`} data-date={post ? post.id : dateStr}>
-              {post && !isFuture ? (
+            <div class={`calendar-day ${!post ? 'no-content' : ''}`} data-date={post ? post.id : dateStr} data-is-post={!!post}>
+              {post ? (
                 <a href={`/blog/${post.id}`} class="day-link">
                   <span class="day-number">{day}</span>
                   <span class="day-label">✏️</span>
                 </a>
               ) : (
-                <div class={`day-disabled ${isFuture ? 'is-future' : ''}`}>
+                <div class="day-disabled">
                   <span class="day-number">{day}</span>
                 </div>
               )}
@@ -107,7 +105,7 @@ const version = pkg.version;
     </main>
 
     <footer>
-      <p>© 2026 ひらめき365 事務局 <span class="version">v0.7.3</span></p>
+      <p>© 2026 ひらめき365 事務局 <span class="version">v0.7.4</span></p>
     </footer>
 
     <script>
@@ -168,23 +166,44 @@ const version = pkg.version;
         const resultsRaw = localStorage.getItem('hirameki365-results');
         const results = JSON.parse(resultsRaw || '{}');
         
-        console.group('Calendar Sync (v0.7.2)');
-        console.log('Current Storage:', results);
+        // 現在の日本時間を取得 (ビルド時の固定日時問題を回避)
+        const nowJST = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"}));
+        const y = nowJST.getFullYear();
+        const m = String(nowJST.getMonth() + 1).padStart(2, '0');
+        const d = String(nowJST.getDate()).padStart(2, '0');
+        const todayStr = `${y}-${m}-${d}`;
+
+        console.group(`Calendar Sync (v0.7.4) - Today: ${todayStr}`);
         
         // 全ての日付要素を取得してループ
         const days = document.querySelectorAll('.calendar-day[data-date]');
-        console.log(`Checking ${days.length} calendar days...`);
 
         days.forEach((dayEl) => {
           const date = dayEl.dataset.date;
+          const isPost = dayEl.dataset.isPost === 'true';
           const data = results[date];
           const label = dayEl.querySelector('.day-label');
           
-          // 既存の状態を完全にリセット
-          dayEl.classList.remove('status-playing', 'status-passed', 'status-tried');
+          // 日付の状態判定
+          const isToday = date === todayStr;
+          const isFuture = date > todayStr;
+
+          // クラスのリセットと設定
+          dayEl.classList.remove('today', 'future', 'status-playing', 'status-passed', 'status-tried');
+          if (isToday) dayEl.classList.add('today');
+          if (isFuture) dayEl.classList.add('future');
+
+          // 未来日付のリンク無効化処理
+          const link = dayEl.querySelector('.day-link');
+          if (isFuture && link) {
+            // リンクを無効化（divに差し替え）
+            const dayNum = dayEl.querySelector('.day-number').textContent;
+            dayEl.innerHTML = `<div class="day-disabled is-future"><span class="day-number">${dayNum}</span></div>`;
+          }
+
           if (label) {
             label.classList.remove('is-completed');
-            label.textContent = '✏️'; // デフォルトアイコン
+            label.textContent = '✏️';
             label.style.fontSize = '';
             label.style.color = '';
           }
@@ -203,7 +222,6 @@ const version = pkg.version;
           }
 
           if (status) {
-            console.log(`Match found for ${date}:`, { status, score });
             dayEl.classList.add(`status-${status}`);
             if (label) {
               if (status === 'playing') {
@@ -216,7 +234,6 @@ const version = pkg.version;
                 label.textContent = resultText;
                 label.classList.add('is-completed');
                 
-                const link = dayEl.querySelector('.day-link');
                 if (link) link.setAttribute('title', '結果を見る');
               }
             }
