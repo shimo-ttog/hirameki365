@@ -168,28 +168,51 @@ const version = pkg.version;
         const resultsRaw = localStorage.getItem('hirameki365-results');
         const results = JSON.parse(resultsRaw || '{}');
         
-        console.group('Calendar Sync (v0.7.2)');
-        console.log('Current Storage:', results);
+        // 日本時間 (JST) での「今日」を取得
+        const nowJST = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"}));
+        const y = nowJST.getFullYear();
+        const m = String(nowJST.getMonth() + 1).padStart(2, '0');
+        const d = String(nowJST.getDate()).padStart(2, '0');
+        const todayStr = `${y}-${m}-${d}`;
+
+        console.group(`Calendar Sync (v0.7.3) - Today: ${todayStr}`);
         
         // 全ての日付要素を取得してループ
         const days = document.querySelectorAll('.calendar-day[data-date]');
-        console.log(`Checking ${days.length} calendar days...`);
 
         days.forEach((dayEl) => {
           const date = dayEl.dataset.date;
           const data = results[date];
           const label = dayEl.querySelector('.day-label');
+          const link = dayEl.querySelector('.day-link');
           
-          // 既存の状態を完全にリセット
-          dayEl.classList.remove('status-playing', 'status-passed', 'status-tried');
-          if (label) {
-            label.classList.remove('is-completed');
-            label.textContent = '✏️'; // デフォルトアイコン
-            label.style.fontSize = '';
-            label.style.color = '';
+          const isToday = date === todayStr;
+          const isFuture = date > todayStr;
+
+          // 状態のリセット
+          dayEl.classList.remove('today', 'future', 'status-playing', 'status-passed', 'status-tried');
+          if (isToday) dayEl.classList.add('today');
+          
+          if (isFuture) {
+            dayEl.classList.add('future');
+            if (link) {
+              link.removeAttribute('href');
+              link.style.cursor = 'default';
+            }
+            if (label) {
+              label.style.display = 'none'; // 未来日は鉛筆を消して中央寄せを維持
+            }
           }
 
-          if (!data) return;
+          if (label && !isFuture) {
+            label.classList.remove('is-completed');
+            label.textContent = '✏️';
+            label.style.fontSize = '';
+            label.style.color = '';
+            label.style.display = 'block';
+          }
+
+          if (!data || isFuture) return;
 
           // ステータスの解析
           let status = '';
@@ -203,7 +226,6 @@ const version = pkg.version;
           }
 
           if (status) {
-            console.log(`Match found for ${date}:`, { status, score });
             dayEl.classList.add(`status-${status}`);
             if (label) {
               if (status === 'playing') {
@@ -216,7 +238,6 @@ const version = pkg.version;
                 label.textContent = resultText;
                 label.classList.add('is-completed');
                 
-                const link = dayEl.querySelector('.day-link');
                 if (link) link.setAttribute('title', '結果を見る');
               }
             }
@@ -320,6 +341,11 @@ const version = pkg.version;
     content: "今日"; position: absolute; top: 2px; right: 2px; 
     font-size: 0.6rem; background: var(--color-accent-gold); color: white;
     padding: 1px 4px; border-radius: 4px; z-index: 2;
+  }
+
+  .calendar-day.future {
+    opacity: 0.7;
+    background-color: #F9F9F9;
   }
 
   /* 進行中（回答途中）のスタイル */
