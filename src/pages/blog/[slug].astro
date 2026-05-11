@@ -101,14 +101,14 @@ const version = pkg.version;
       </div>
 
       <footer class="no-print" style="text-align: center; margin-top: 3rem; color: #666; font-size: 0.8rem;">
-        <p>© 2026 ひらめき365 事務局 v0.7.0</p>
+        <p>© 2026 ひらめき365 事務局 v0.7.4</p>
       </footer>
     </article>
 
     <script is:inline src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script define:vars={{ slug: entry.id }}>
       // 起動時にサーバーから渡されたslugを使用
-      console.log(`[INIT] Quiz Page for: ${slug} (v0.7.0)`);
+      console.log(`[INIT] Quiz Page for: ${slug} (v0.7.4)`);
 
       // Service Workerの登録
       if ('serviceWorker' in navigator) {
@@ -350,12 +350,30 @@ const version = pkg.version;
         }
 
         const shareSection = document.getElementById('share-section');
-        if (shareSection) shareSection.classList.remove('hidden');
+        if (shareSection) {
+          shareSection.classList.remove('hidden');
+          updateShareLinks(finalScore, allCorrect);
+        }
 
         if (!silent && allCorrect && typeof confetti === 'function') {
           playSound('perfect');
           confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, zIndex: 9999 });
         }
+      }
+
+      function updateShareLinks(finalScore, allCorrect) {
+        const shareLine = document.getElementById('share-line');
+        const shareX = document.getElementById('share-x');
+        const title = document.title.replace('ひらめき365：', '');
+        let text = `【ひらめき365】${title} の脳活に挑戦しました！\n結果：${finalScore}/${totalSteps} 正解`;
+        if (allCorrect) text += ' 💮 パーフェクト！';
+        text += '\n#ひらめき365 #脳活';
+        
+        const url = window.location.origin;
+        const encodedText = encodeURIComponent(text + '\n' + url);
+
+        if (shareLine) shareLine.href = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(url)}&text=${encodedText}`;
+        if (shareX) shareX.href = `https://twitter.com/intent/tweet?text=${encodedText}`;
       }
 
       const fontBtns = document.querySelectorAll('.font-btn');
