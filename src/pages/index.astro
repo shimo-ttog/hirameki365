@@ -2,6 +2,7 @@
 import '../styles/design-tokens.css';
 import { getCollection } from 'astro:content';
 import pkg from '../../package.json';
+import GoogleAnalytics from '../components/GoogleAnalytics.astro';
 
 // 全てのMarkdown記事を取得
 const blogEntries = await getCollection('blog');
@@ -40,6 +41,7 @@ const version = pkg.version;
 ---
 <html lang="ja">
   <head>
+    <GoogleAnalytics />
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ひらめき365｜大人の脳活</title>
