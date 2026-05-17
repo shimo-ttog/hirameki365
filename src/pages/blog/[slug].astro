@@ -372,10 +372,11 @@ const version = pkg.version;
         text += '\n#ひらめき365 #脳活';
         
         const url = window.location.origin;
-        const encodedText = encodeURIComponent(text + '\n' + url);
+        const encodedText = encodeURIComponent(text);
+        const encodedUrl = encodeURIComponent(url);
 
-        if (shareLine) shareLine.href = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(url)}&text=${encodedText}`;
-        if (shareX) shareX.href = `https://twitter.com/intent/tweet?text=${encodedText}`;
+        if (shareLine) shareLine.href = `https://social-plugins.line.me/lineit/share?url=${encodedUrl}&text=${encodedText}`;
+        if (shareX) shareX.href = `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedText}`;
       }
 
       const fontBtns = document.querySelectorAll('.font-btn');
