@@ -1,7 +1,7 @@
 {
   "name": "hirameki365",
   "type": "module",
-  "version": "0.7.6",
+  "version": "0.7.7",
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",

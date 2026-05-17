@@ -366,16 +366,20 @@ const version = pkg.version;
       function updateShareLinks(finalScore, allCorrect) {
         const shareLine = document.getElementById('share-line');
         const shareX = document.getElementById('share-x');
-        const title = document.title.replace('ひらめき365：', '');
-        let text = `【ひらめき365】${title} の脳活に挑戦しました！\n結果：${finalScore}/${totalSteps} 正解`;
-        if (allCorrect) text += ' 💮 パーフェクト！';
-        text += '\n#ひらめき365 #脳活';
-        
         const url = window.location.origin;
+        
+        // パターン2：お誘い型メッセージ
+        let text = `【ひらめき365】今日の脳活トレーニングを完了しました！\n正解数は ${finalScore}/${totalSteps} でした 💮 スッキリ！\n\nあなたも一緒に脳トレしてみませんか？\n#ひらめき365 #脳活`;
+        
         const encodedText = encodeURIComponent(text);
         const encodedUrl = encodeURIComponent(url);
+        // LINE用：テキストとURLを合体させたエンコード文字列
+        const encodedFullMessage = encodeURIComponent(text + '\n' + url);
 
-        if (shareLine) shareLine.href = `https://social-plugins.line.me/lineit/share?url=${encodedUrl}&text=${encodedText}`;
+        // LINE：メッセージ内容を確実に反映させるため、カスタムURLスキーム形式（R/msg/text）を使用
+        if (shareLine) shareLine.href = `https://line.me/R/msg/text/?${encodedFullMessage}`;
+        
+        // X：従来の形式
         if (shareX) shareX.href = `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedText}`;
       }
 
