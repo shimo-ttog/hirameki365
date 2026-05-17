@@ -109,10 +109,10 @@ const version = pkg.version;
     </main>
 
     <footer>
-      <p>© 2026 ひらめき365 事務局 <span class="version">v0.7.4</span></p>
+      <p>© 2026 ひらめき365 事務局 <span class="version">v{version}</span></p>
     </footer>
 
-    <script>
+    <script define:vars={{ version }}>
       // 文字サイズ変更の制御
       const fontBtns = document.querySelectorAll('.font-btn');
       function applyFontSize(size) {
@@ -177,7 +177,7 @@ const version = pkg.version;
         const d = String(nowJST.getDate()).padStart(2, '0');
         const todayStr = `${y}-${m}-${d}`;
 
-        console.group(`Calendar Sync (v0.7.4) - Today: ${todayStr}`);
+        console.group(`Calendar Sync (v${version}) - Today: ${todayStr}`);
         
         // 全ての日付要素を取得してループ
         const days = document.querySelectorAll('.calendar-day[data-date]');

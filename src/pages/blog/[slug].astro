@@ -103,14 +103,14 @@ const version = pkg.version;
       </div>
 
       <footer class="no-print" style="text-align: center; margin-top: 3rem; color: #666; font-size: 0.8rem;">
-        <p>© 2026 ひらめき365 事務局 v0.7.4</p>
+        <p>© 2026 ひらめき365 事務局 v{version}</p>
       </footer>
     </article>
 
     <script is:inline src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    <script define:vars={{ slug: entry.id }}>
+    <script define:vars={{ slug: entry.id, version }}>
       // 起動時にサーバーから渡されたslugを使用
-      console.log(`[INIT] Quiz Page for: ${slug} (v0.7.4)`);
+      console.log(`[INIT] Quiz Page for: ${slug} (v${version})`);
 
       // Service Workerの登録
       if ('serviceWorker' in navigator) {
